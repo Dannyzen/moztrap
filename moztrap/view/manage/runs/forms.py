@@ -81,6 +81,8 @@ class RunForm(mtforms.NonFieldErrorsClassFormMixin, mtforms.MTModelForm):
             # some of the values weren't ints, and therefore this is
             # from the read-only list of suites.  so return None so that we
             # don't try to remove and re-add them.
+            if "suites" in self.changed_data:  # pragma: no cover
+                self.changed_data.remove("suites")
             return None
 
 
@@ -95,7 +97,7 @@ class RunForm(mtforms.NonFieldErrorsClassFormMixin, mtforms.MTModelForm):
         user = user or self.user
         run = super(RunForm, self).save(user=user)
 
-        if self.cleaned_data["suites"]:
+        if "suites" in self.changed_data:
             # if this is empty, then don't make any changes, because
             # either there are no suites, or this came from the read
             # only suite list.
@@ -128,6 +130,9 @@ class EditRunForm(RunForm):
         pvf = self.fields["productversion"]
         sf = self.fields["suites"]
         isf = self.fields["is_series"]
+        self.initial["suites"] = list(
+            self.instance.suites.values_list(
+                "name", flat=True).order_by("runsuites__order"))
         if self.instance.status == model.Run.STATUS.active:
             # can't change the product version of an active run.
             pvf.queryset = pvf.queryset.filter(
@@ -137,16 +142,9 @@ class EditRunForm(RunForm):
             isf.readonly = True
             # can't change suites of an active run either
             sf.readonly = True
-            self.initial["suites"] = list(
-                self.instance.suites.values_list(
-                    "name", flat=True).order_by("runsuites__order"))
         else:
             # regardless, can't switch to different product entirely
             pvf.queryset = pvf.queryset.filter(
                 product=self.instance.productversion.product_id)
-
-            # if there is only 1, no sense in having any other options.
-            if pvf.queryset.count() == 1:
-                pvf.readonly = True
 
             # ajax populates available and included suites on page load

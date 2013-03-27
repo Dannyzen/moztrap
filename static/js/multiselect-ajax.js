@@ -40,8 +40,7 @@ var MT = (function (MT, $) {
                         included_id = $(".edit-" + options.for_type).data(
                             options.for_type + "-id");
                     if (trigger_id || options.fetch_without_trigger_value) {
-                        $(".multiselect").closest(
-                            ".formfield").removeClass("hiddenfield");
+                        $(".multiselect").removeClass("hiddenfield");
                         MT.doPopulateMultiselect(
                             options.ajax_url_root,
                             options.ajax_trigger_filter,
@@ -53,15 +52,13 @@ var MT = (function (MT, $) {
                         );
                     }
                     else if (options.hide_without_trigger_value) {
-                        $(".multiselect").closest(
-                            ".formfield").addClass("hiddenfield");
+                        $(".multiselect").addClass("hiddenfield");
                     }
                     else {
                         // the user selected the "----" option, so clear
                         // multiselect
                         $(".multiselect").find(".select").html("");
-                        $(".multiselect").closest(
-                            ".formfield").removeClass("hiddenfield");
+                        $(".multiselect").removeClass("hiddenfield");
                     }
                 });
             }
@@ -225,6 +222,7 @@ var MT = (function (MT, $) {
                         included.html(cache[incl_url.toString()]);
                         available.loadingOverlay("remove");
                         available.html(cache[avail_url.toString()]);
+                        $(".form-actions :input").prop("disabled", false);
                     }
                 };
 
@@ -237,6 +235,8 @@ var MT = (function (MT, $) {
                         beforeSend: function () {
                             included.html("");
                             included.loadingOverlay();
+                            // disable saving form till the values are loaded.
+                            $(".form-actions :input").prop("disabled", true);
                         },
                         success: function (response) {
                             /*
@@ -249,7 +249,6 @@ var MT = (function (MT, $) {
                                 {items: response.objects});
                             incl_complete = true;
                             setItems();
-                            included.find(".select").attr("disabled", false);
                         },
                         error: function (response) {
                             $(".multiselected").loadingOverlay("remove");
@@ -257,7 +256,12 @@ var MT = (function (MT, $) {
                             // so that if the form is submitted when the ajax
                             // has failed, we don't try to update the items
                             // list, only update the other fields in the form.
-                            included.find(".select").attr("disabled", true);
+                            $(".multiselect").parent().find(":input").prop("disabled", true);
+                            $(ich.message({
+                                message: "Error loading data.  Please reload page or try again later.",
+                                tags: "error"
+                            })).appendTo($('#messages ul'));
+                            $('#messages ul').messages();
 
                             console.error(response);
                         },

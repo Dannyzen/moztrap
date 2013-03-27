@@ -202,7 +202,10 @@ class CaseImporter(object):
             sid = transaction.savepoint()
 
             # create the top-level case object which holds the versions
-            case = Case.objects.create(product=self.productversion.product)
+            case = Case.objects.create(
+                product=self.productversion.product,
+                idprefix=new_case.get("idprefix", ""),
+                )
 
             # create the case version which holds the details
             caseversion = CaseVersion.objects.create(
@@ -270,7 +273,7 @@ class CaseImporter(object):
             try:
                 casestep = CaseStep.objects.create(
                     caseversion=caseversion,
-                    number=step_num+1,
+                    number=step_num + 1,
                     instruction=new_step["instruction"],
                     expected=new_step.get("expected", ""),
                     )

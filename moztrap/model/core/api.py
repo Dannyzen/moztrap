@@ -1,14 +1,16 @@
+from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from tastypie import fields
 from tastypie import http
-from tastypie.resources import ModelResource, ALL, ALL_WITH_RELATIONS
 from tastypie.exceptions import ImmediateHttpResponse
 
 from .models import Product, ProductVersion
+from .auth import User
 from ..environments.api import EnvironmentResource
 from ..mtapi import MTResource, MTAuthorization
 
 import logging
 logger = logging.getLogger(__name__)
+
 
 class ReportResultsAuthorization(MTAuthorization):
     """Authorization that only allows users with execute privileges."""
@@ -50,10 +52,41 @@ class ProductVersionResource(MTResource):
         authorization = ProductVersionAuthorization()
         ordering = ['product__id', 'version', 'id']
 
+
     @property
     def model(self):
         """Model class related to this resource."""
         return ProductVersion
+
+
+    @property
+    def read_create_fields(self):
+        """product is read-only"""
+        return ["product"]
+
+
+    def obj_update(self, bundle, request=None, **kwargs):
+        """Avoid concurrency error caused by the setting of latest_version"""
+        bundle = self.check_read_create(bundle)
+
+        try:
+            # use grandparent rather than parent
+            bundle = super(MTResource, self).obj_update(
+                bundle=bundle, request=request, **kwargs)
+
+            # update the cc_version
+            bundle.obj.cc_version = self.model.objects.get(
+                id=bundle.obj.id).cc_version
+
+            # specify the user
+            bundle.obj.save(user=request.user)
+
+        except Exception:  # pragma: no cover
+            logger.exception("error updating %s", bundle)  # pragma: no cover
+            raise  # pragma: no cover
+
+        return bundle
+
 
 
 class ProductResource(MTResource):
@@ -116,6 +149,7 @@ class ProductResource(MTResource):
 
         return updated_bundle
 
+
     def obj_update(self, bundle, request=None, **kwargs):
         """Oversee updating of product.
         If this were RESTful, it would remove all existing versions and add
@@ -127,7 +161,7 @@ class ProductResource(MTResource):
         productversions = bundle.data.pop("productversions", [])
         bundle.data["productversions"] = []
 
-        updated_bundle =  super(ProductResource, self).obj_update(
+        updated_bundle = super(ProductResource, self).obj_update(
             bundle=bundle, request=request, **kwargs)
 
         # create the productversions
@@ -153,3 +187,12 @@ class ProductVersionEnvironmentsResource(ModelResource):
         list_allowed_methods = ['get']
         fields = ["id", "version", "codename"]
 
+
+
+class UserResource(ModelResource):
+    """Return a list of usernames"""
+
+    class Meta:
+        queryset = User.objects.all()
+        list_allowed_methods = ['get']
+        fields = ["id", "username"]

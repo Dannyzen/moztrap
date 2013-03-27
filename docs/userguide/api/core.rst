@@ -6,20 +6,42 @@ Product
 
 .. http:get:: /api/v1/product
 
-    Return a list of products and the product versions it owns.
+Filtering
+^^^^^^^^^
 
-
-    :format: (required) The API **always** requires a value of ``json`` for this
-        field.
-    :name: (optional) The name of the product to filter on.
-    :limit: (optional) Defaults to 20 items, but can be set higher or lower.  0
-        will return all records.
-
-    **Example request**:
+    :name: The name of the product to filter on.
 
     .. sourcecode:: http
 
-        GET /api/v1/product/?format=json
+        GET /api/v1/product/?format=json&name=Firefox
+
+.. http:get:: /api/v1/product/<id>
+.. http:post:: /api/v1/product
+
+Required Fields
+^^^^^^^^^^^^^^^
+
+    :name: A string Product name.
+    :productversions: A list of at least one Product Version.
+
+Optional Fields
+^^^^^^^^^^^^^^^
+
+    :description: A string description.
+
+.. http:delete:: /api/v1/product/<id>
+
+.. note::
+
+    Deleting a Product will delete all of it's child objects.
+
+.. http:put:: /api/v1/product/<id>
+
+.. note::
+
+    ProductVersions are displayed in the GET results. They may be added to
+    or changed by a POST request, but a POST to Product will not delete
+    any ProductVersion.
 
 
 Product Version
@@ -27,21 +49,14 @@ Product Version
 
 .. http:get:: /api/v1/productversion
 
-    Return a list of product versions.
+Filtering
+^^^^^^^^^
 
-    .. note::
-
-        The underscores in query params (like ``case__suites``) are **DOUBLE**
-        underscores.
-
-    :format: (required) The API **always** requires a value of ``json`` for this
-        field.
-    :version: (optional) The ProductVersion ``name`` to filter
+    :version: The ProductVersion ``name`` to filter
         on.  For example, if the Product and Version are ``Firefox 10`` then
         the ``version`` would be ``10``.
-    :product__name: (optional) The Product ``name`` to filter on.
-    :limit: (optional) Defaults to 20 items, but can be set higher or lower.  0
-        will return all records.
+    :product: The Product ``id`` to filter on.
+    :product__name: The Product ``name`` to filter on.
 
     **Example request**:
 
@@ -49,3 +64,25 @@ Product Version
 
         GET /api/v1/productversion/?format=json&version=10
         GET /api/v1/productversion/?format=json&product__name=Firefox
+
+.. http:get:: /api/v1/productversion/<id>
+
+.. http:post:: /api/v1/productversion
+
+Required Fields
+^^^^^^^^^^^^^^^
+
+    :version: A string ProductVersion name.
+    :product: A resource uri of the parent Product.
+
+Optional Fields
+^^^^^^^^^^^^^^^
+
+    :codename: A string codename.
+
+.. http:delete:: /api/v1/productversion/<id>
+.. http:put:: /api/v1/productversion/<id>
+
+.. note::
+
+    The Product of an existing ProductVersion may not be changed.

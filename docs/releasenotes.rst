@@ -1,9 +1,26 @@
 Release Notes
 =============
 
-Version 1.3.7
+Version 1.4.4
 -------------
-*release date - 1/3/2013*
+*release date - 3/22/2013*
+
+* **Link to view result while running test** - If you want to share the result
+  you just found with someone, clicking the result icon (like passed / failed)
+  will navigate you to the result for that test.  You can then share that link
+  or add it to a bug, etc.
+* **Case name sync** - It ends up that having unique case names for different
+  versions of the case is confusing.  This is especially true when you are
+  selecting cases for a suite.  The screen must show you one of the case names
+  so it shows you the latest case name.  This may not be the one you're
+  thinking of if you're working on an earlier product.  So to simplify this,
+  any time you save a case, it will make all the version of that case the same.
+* **Several bug fixes** - please see Pivotal Tracker_ for details.
+
+
+Version 1.4
+-----------
+*release date - 1/22/2013*
 
 * **Fill Product Version Cases** - Added the ability to fill in case versions
   when they exist in one product version and not in another.  This can be handy
@@ -140,3 +157,4 @@ Version 1.2
 * **Better i18n support** - Added more support for non-ascii characters.
 
 .. _Markdown: http://daringfireball.net/projects/markdown/syntax
+.. _Tracker: https://www.pivotaltracker.com/projects/280483#

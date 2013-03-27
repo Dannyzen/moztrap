@@ -1,32 +1,42 @@
 Tags API
-=============
+========
 
 Tag
---------
+---
 
 .. http:get:: /api/v1/tag
 
-    Return a list of test runs
+Filtering
+^^^^^^^^^
 
-    .. note::
-
-        Requires an API key in the header.  You must request this API key
-        from your MozTrap admin.  It is generated in the User edit page.
-        ``username=foo&api_key=bar``
-
-    .. note::
-
-        The underscores in query params (like ``case__suites``) are **DOUBLE**
-        underscores.
-
-    :format: (required) The API **always** requires a value of ``json`` for this
-        field.
-    :name: (optional) The name of the tag.
-    :limit: (optional) Defaults to 20 items, but can be set higher or lower.  0
-        will return all records.
+    :name: The Tag ``name`` to filter on.
+    :product: The Product ``id`` to filter on.
+    :product__name: The Product ``name`` to filter on.
 
     **Example request**:
 
     .. sourcecode:: http
 
         GET /api/v1/tag/?format=json
+
+.. http:get:: /api/v1/tag/<id>
+.. http:post:: /api/v1/suite
+
+Required Fields
+^^^^^^^^^^^^^^^
+
+    :name: A string name for the Tag.
+    :product: A resource uri to a Product.
+
+Optional Fields
+^^^^^^^^^^^^^^^
+
+    :description: A string description for the Tag.
+
+.. http:delete:: /api/v1/suite/<id>
+.. http:put:: /api/v1/suite/<id>
+
+.. note::
+
+    The Tag's Product may not be changed unless the tag is not in use, the
+    product is being set to None, or the product matches the existing cases."

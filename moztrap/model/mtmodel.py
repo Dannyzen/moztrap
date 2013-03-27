@@ -152,41 +152,6 @@ class MTManager(models.Manager):
         return qs
 
 
-    def bulk_insert_or_update(self, obj_list):
-        """ Bulk insert with a list of model objects"""
-
-        if len(obj_list):
-            create_fields = [
-                field.get_attname_column()[1] for field in obj_list[0]._meta.fields
-                ]
-            update_fields = set(create_fields) - set([
-                "id", "created_by_id", "created_on", "deleted_by_id", "deleted_on"
-            ])
-
-            def getfield(obj, field):
-                value = getattr(obj, field)
-                if isinstance(value, (str, datetime.datetime)):
-                    return "'{0}'".format(value)
-                elif value is None:
-                    return "NULL"
-                else:
-                    return value
-
-            values = []
-            for obj in obj_list:
-                values.append("({0})".format(", ".join(
-                    ["{0}".format(getfield(obj, field)) for field in create_fields]
-                )))
-
-            db_table = self.model._meta.db_table
-
-            bulk_insert_or_update(
-                db_table,
-                create_fields,
-                update_fields,
-                values,
-                )
-
 
 class MTModel(models.Model):
     """
@@ -248,8 +213,8 @@ class MTModel(models.Model):
                 id=self.id, cc_version=previous_version)._update(values)
             if not rows:
                 raise ConcurrencyError(
-                    "No row with id {0} and version {1} updated.".format(
-                        self.id, previous_version)
+                    "No {0} row with id {1} and version {2} updated.".format(
+                        self.__class__, self.id, previous_version)
                     )
         else:
             return super(MTModel, self).save(*args, **kwargs)
@@ -299,13 +264,13 @@ class MTModel(models.Model):
 
         for name, filter_func in cascade.items():
             mgr = getattr(self, name)
-            if mgr.__class__.__name__ == "ManyRelatedManager": # M2M
+            if mgr.__class__.__name__ == "ManyRelatedManager":  # M2M
                 clone_mgr = getattr(clone, name)
                 existing = set(clone_mgr.all())
                 new = set(filter_func(mgr.all()))
                 clone_mgr.add(*new.difference(existing))
                 clone_mgr.remove(*existing.difference(new))
-            elif mgr.__class__.__name__ == "RelatedManager": # reverse FK
+            elif mgr.__class__.__name__ == "RelatedManager":  # reverse FK
                 reverse_name = getattr(self.__class__, name).related.field.name
                 for obj in filter_func(mgr.all()):
                     obj.clone(overrides={reverse_name: clone})
@@ -473,45 +438,6 @@ def set_default_status(sender, **kwargs):
     """Set the default status on a DraftStatusModel subclass."""
     if issubclass(sender, DraftStatusModel):
         sender._meta.get_field("status").default = sender.DEFAULT_STATUS
-
-
-def bulk_insert_or_update(db_table, create_fields, update_fields, values):
-    """
-    Bulk insert with a list of fields and values list
-
-    On duplicate key, update those values based on the update_fields list.
-
-    The concept of this handy manager was borrowed
-    from a gist by mmohiudd: https://gist.github.com/3903508
-
-    Except I made this work with model objects instead of lists of
-    specific fields to update and insert.  We figure it out based on the
-    fields of the model object.
-
-    This provides bulk insert and UPDATE ON DUPLICATE KEY.
-
-    """
-
-    from django.db import connection, transaction
-    cursor = connection.cursor()
-
-    base_sql = "INSERT INTO {0} (`{1}`) VALUES {2}".format(
-        db_table,
-        "`, `".join(create_fields),
-        ", ".join(values)
-    )
-
-    on_duplicates = []
-    for field in update_fields:
-        on_duplicates.append("`{0}`=VALUES(`{0}`)".format(field, field))
-
-    sql = "{0} ON DUPLICATE KEY UPDATE {1}".format(
-        base_sql,
-        ", ".join(on_duplicates),
-        )
-
-    cursor.execute(sql)
-    transaction.commit_unless_managed()
 
 
 class_prepared.connect(set_default_status)

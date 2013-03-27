@@ -10,7 +10,7 @@ from django.http import HttpResponse
 from .models import Run, RunCaseVersion, RunSuite, Result
 from ..mtapi import MTResource, MTApiKeyAuthentication
 from ..core.api import (ProductVersionResource, ProductResource,
-                        ReportResultsAuthorization)
+                        ReportResultsAuthorization, UserResource)
 from ..environments.api import EnvironmentResource
 from ..environments.models import Environment
 from ..library.api import CaseVersionResource, BaseSelectionResource
@@ -99,14 +99,14 @@ class RunResource(ModelResource):
     def dispatch_detail(self, request, **kwargs):
         """For details, we want the full info on environments for the run """
 
-        self.fields["environments"].full=True
+        self.fields["environments"].full = True
         return super(RunResource, self).dispatch_detail(request, **kwargs)
 
 
     def dispatch_list(self, request, **kwargs):
         """For list, we don't want the full info on environments """
 
-        self.fields["environments"].full=False
+        self.fields["environments"].full = False
         return super(RunResource, self).dispatch_list(request, **kwargs)
 
 
@@ -119,7 +119,7 @@ class RunResource(ModelResource):
             data,
             response_class=response_class,
             **response_kwargs
-            );
+            )
 
         if isinstance(data, Bundle):
             # data will be a bundle if we are creating a new Run.  And in that
@@ -133,7 +133,7 @@ class RunResource(ModelResource):
             new_content["ui_uri"] = full_url
             new_content["resource_uri"] = data.data["resource_uri"]
 
-            resp.content = json.dumps(new_content);
+            resp.content = json.dumps(new_content)
             # need to set the content type to application/json
             resp._headers["content-type"] = ("Content-Type", "application/json; charset=utf-8")
         return resp
@@ -258,9 +258,9 @@ class ResultResource(ModelResource):
 
         try:
             status = data.pop("status")
-            case=data.pop("case")
+            case = data.pop("case")
             env = Environment.objects.get(pk=data.get("environment"))
-            run=data.pop("run_id")
+            run = data.pop("run_id")
 
         except KeyError as e:
             raise ValidationError(
@@ -300,18 +300,20 @@ class SuiteSelectionResource(BaseSelectionResource):
 
     product = fields.ForeignKey(ProductResource, "product")
     runs = fields.ToManyField(RunResource, "runs")
+    created_by = fields.ForeignKey(UserResource, "created_by", full=True, null=True)
 
     class Meta:
         queryset = Suite.objects.all().select_related(
             "created_by",
             ).prefetch_related(
             "runsuites",
-            )
+            ).distinct().order_by("runsuites__order")
         list_allowed_methods = ['get']
-        fields = ["id", "name"]
+        fields = ["id", "name", "created_by"]
         filtering = {
             "product": ALL_WITH_RELATIONS,
             "runs": ALL_WITH_RELATIONS,
+            "created_by": ALL_WITH_RELATIONS,
             }
 
 
@@ -320,17 +322,11 @@ class SuiteSelectionResource(BaseSelectionResource):
 
         suite = bundle.obj
         bundle.data["suite_id"] = unicode(suite.id)
-
-        try:
-            bundle.data["created_by"] = {
-                "id": unicode(suite.created_by.id),
-                "username": suite.created_by.username,
-                }
-        except AttributeError:
-            bundle.data["created_by"] = None
+        bundle.data["case_count"] = suite.cases.count()
+        bundle.data["filter_cases"] = filter_url("manage_cases", suite)
 
         if "runs" in bundle.request.GET.keys():
-            run_id=int(bundle.request.GET["runs"])
+            run_id = int(bundle.request.GET["runs"])
             s = suite.runsuites.all()
             order = [x.order for x in suite.runsuites.all()
                      if x.run_id == run_id][0]
@@ -339,6 +335,3 @@ class SuiteSelectionResource(BaseSelectionResource):
             bundle.data["order"] = None
 
         return bundle
-
-
-
